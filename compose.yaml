@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-coupon}
+      POSTGRES_USER: ${POSTGRES_USER:-coupon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coupon}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - coupon-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coupon} -d ${POSTGRES_DB:-coupon}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  coupon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-coupon}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-coupon}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-coupon}
+      COUPON_GEO_BASE_URL: ${COUPON_GEO_BASE_URL:-https://ipwho.is}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  coupon-postgres-data:
